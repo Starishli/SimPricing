@@ -7,7 +7,7 @@ from collections.abc import Iterable
 class SimEngine(object):
     def __init__(self, method="GeoBrownian", s_0=100, **kwargs):
         """
-        Currently support method:
+        Currently support methods:
             GeoBrownian: Geometric Brownian Motion
         kwargs for:
             GeoBrownian: {"sigma": standard deviation, "r": risk-free expected payoff}
@@ -24,9 +24,17 @@ class SimEngine(object):
             if key not in full_kwarg_map[method]:
                 raise ValueError("Illegal input of kwargs!")
 
-        self.method = method
-        self.kwargs = kwargs
-        self.s_0 = s_0
+        self._method = method
+        self._kwargs = kwargs
+        self._s_0 = s_0
+
+    @property
+    def kwargs(self):
+        return self._kwargs
+
+    @property
+    def s_0(self):
+        return self._s_0
 
     def prc_generator(self, upper_t):
         """
@@ -35,16 +43,16 @@ class SimEngine(object):
         :return:            Type: float or Series                     if upper_t is an iterable object, return a price
                                                                       series with index upper_t
         """
-        s = self.s_0
+        s = self._s_0
 
         if isinstance(upper_t, Iterable):
             prc = [s, ]
             date = [0, ] + list(upper_t)
             t_diff = np.diff(upper_t, prepend=0)
 
-            if self.method == "GeoBrownian":
-                r = self.kwargs["r"]
-                sigma = self.kwargs["sigma"]
+            if self._method == "GeoBrownian":
+                r = self._kwargs["r"]
+                sigma = self._kwargs["sigma"]
 
                 for t in t_diff:
                     epsilon = np.random.normal(0, 1)
@@ -55,9 +63,9 @@ class SimEngine(object):
 
             prc = pd.Series(data=prc, index=date)
         else:
-            if self.method == "GeoBrownian":
-                r = self.kwargs["r"]
-                sigma = self.kwargs["sigma"]
+            if self._method == "GeoBrownian":
+                r = self._kwargs["r"]
+                sigma = self._kwargs["sigma"]
                 epsilon = np.random.normal(0, 1)
 
                 prc = s * np.exp((r - np.power(sigma, 2) / 2) * upper_t + sigma * epsilon * np.sqrt(upper_t))

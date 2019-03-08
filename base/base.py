@@ -5,20 +5,30 @@ from base.engine import SimEngine
 
 
 class SimBase(object):
-    def __init__(self, sim_engine, sim_times):
+    def __init__(self, sim_engine, sim_times, r):
         """
         Base class for simulation
         :param sim_engine:  Type: SimEngine
-        :param sim_times:   Type: Int           Times of simulation
+        :param sim_times:   Type: int           Times of simulation
+        :param r:           Type: float         risk-free interest rate, should be the same as r in sim_engine
+                                                (if there is one)
         """
         if not isinstance(sim_engine, SimEngine):
             raise TypeError("Illegal input of sim_engine")
 
-        self.sim_engine = sim_engine
-        self.sim_times = sim_times
-        self.r = self.sim_engine.kwargs["r"]
+        self._sim_engine = sim_engine
+        self._sim_times = sim_times
 
-        self.prc = None
+        if "r" in sim_engine.kwargs.keys():
+            if not r == sim_engine.kwargs["r"]:
+                raise ValueError("Illegal input of r, must be aligned with r in sim_engine!")
+
+        self._r = r
+        self._prc = None
+
+    @property
+    def prc(self):
+        return self._prc
 
     @abc.abstractmethod
     def _calc_payoff(self, underlying_prc, sim_t, **kwargs):
@@ -39,10 +49,11 @@ class SimBase(object):
         :return: expectation of price
         """
         prc_list = []
-        for _ in range(self.sim_times):
-            underlying_prc = self.sim_engine.prc_generator(sim_t)
+        for _ in range(self._sim_times):
+            underlying_prc = self._sim_engine.prc_generator(sim_t)
 
             prc = self._calc_payoff(underlying_prc, sim_t, **kwargs)
             prc_list.append(prc)
 
-        return np.mean(prc_list)
+        self._prc = np.mean(prc_list)
+        return self._prc
