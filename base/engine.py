@@ -11,7 +11,8 @@ class SimEngine(object):
             GeoBrownian: Geometric Brownian Motion
         kwargs for:
             GeoBrownian: {"sigma": standard deviation, "r": risk-free expected payoff}
-        :param method:    Type: String   To specify the method for generating price sequence.
+        :param method:    Type: String        To specify the method for generating price sequence.
+        :param s_0:       Type: int or float  initial price of underlying asset
         :param kwargs:    Type: Dict
         """
         full_methods = ["GeoBrownian", ]
