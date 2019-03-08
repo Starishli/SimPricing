@@ -26,17 +26,19 @@ class AsianOption(SimBase):
 
 
 if __name__ == "__main__":
-    sim_engine_ = SimEngine(sigma=0.3, r=0.03)
+    r = 0.03
     sim_times_ = 10000
+    sim_t_1 = 20 / 365
+    sim_t_2 = np.array([5, 10, 15, 20]) / 365
 
-    sim_t_ = 50 / 365
-    eu_opt = EuropeanOption(sim_engine_, sim_times_, 0.02)
-    eu_p = eu_opt.sim_exe(sim_t_, strike=100)
+    sim_engine_ = SimEngine(sigma=0.3, r=r)
+
+    eu_opt = EuropeanOption(sim_engine_, sim_times_, r)
+    eu_p = eu_opt.sim_exe(sim_t_1, strike=100)
     print(eu_p)
 
-    sim_t_ = np.array([5, 10, 15, 20]) / 365
-    as_opt = AsianOption(sim_engine_, sim_times_, 0.03)
-    as_p = as_opt.sim_exe(sim_t_, strike=100)
+    as_opt = AsianOption(sim_engine_, sim_times_, r)
+    as_p = as_opt.sim_exe(sim_t_2, strike=100)
     print(as_p)
 
 
