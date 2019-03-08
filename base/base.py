@@ -44,7 +44,7 @@ class SimBase(object):
     def sim_exe(self, sim_t, **kwargs):
         """
         Execute simulation
-        :param sim_t:     Type: Iterable or float
+        :param sim_t:     Type: Iterable or float     Total times of simulation
         :param kwargs:
         :return: expectation of price
         """
