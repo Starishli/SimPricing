@@ -93,7 +93,7 @@ class SimEngine(object):
             else:
                 raise ValueError
 
-        return prc, prc_2d
+        return prc_2d
 
 
 if __name__ == "__main__":
@@ -101,12 +101,12 @@ if __name__ == "__main__":
     upper_t_ = range(0, 252, 1)
     upper_t_ = np.array(upper_t_) / 252
 
-    prc_seq_1, prc_seq_2 = sim_engine.prc_generator(upper_t=upper_t_)
+    prc_seq = sim_engine.prc_generator(upper_t=upper_t_)
 
     import matplotlib.pyplot as plt
 
-    plt.plot(prc_seq_1)
-    plt.plot(prc_seq_2)
+    plt.plot(prc_seq["s_1"])
+    plt.plot(prc_seq["s_2"])
     plt.show()
 
 
