@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import pandas as pd
 
@@ -10,7 +11,10 @@ class SimEngine(object):
         Currently support methods:
             GeoBrownian: Geometric Brownian Motion
         kwargs for:
-            GeoBrownian: {"sigma": standard deviation or correlation matrix, "r": risk-free expected payoff}
+            GeoBrownian: {"sigma": standard deviation, float or list
+                          "r": risk-free expected payoff, float
+                          "rho": correlation matrix, numpy.matrix
+                          }
         :param method:    Type: String        To specify the method for generating price sequence.
         :param s_0:       Type: int or float  initial price of underlying asset
         :param kwargs:    Type: Dict
@@ -28,6 +32,7 @@ class SimEngine(object):
         self._method = method
         self._kwargs = kwargs
         self._s_0 = s_0
+        self._n_dim = None
 
     @property
     def kwargs(self):
@@ -37,76 +42,86 @@ class SimEngine(object):
     def s_0(self):
         return self._s_0
 
+    @property
+    def n_dim(self):
+        if self._method == "GeoBrownian":
+            if isinstance(self.kwargs["sigma"], list):
+                return len(self.kwargs["sigma"])
+            else:
+                return 1
+        else:
+            raise ValueError
+
     def prc_generator(self, upper_t):
         """
         Generate price based on upper_t. Must keep in mind that upper_t is expressed in Year.
         :param upper_t:     Type: float or iterable object of float   expressed in Year
-        :return:            Type: float or Series                     if upper_t is an iterable object, return a price
-                                                                      series with index upper_t
+        :return:            Type: DataFrame   columns: upper_t, seq_N (N start from 0)
         """
-        s = self.s_0
-        if isinstance(upper_t, Iterable):
-            prc = [s, ]
+        if not isinstance(upper_t, Iterable):
+            upper_t = [upper_t, ]
 
-            s_1 = s
-            s_2 = s
-            prc_2d = [[s_1, s_2], ]
+        if self._method == "GeoBrownian":
+            t_s = time.time()
 
-            date = [0, ] + list(upper_t)
+            s_array = np.fromiter([self.s_0, ] * self.n_dim, dtype="float64")
+
+            prc = []
             t_diff = np.diff(upper_t, prepend=0)
 
-            if self._method == "GeoBrownian":
-                r = self._kwargs["r"]
-                sigma = self._kwargs["sigma"]
+            r = self.kwargs["r"]
 
-                for t in t_diff:
-                    if "rho" not in self.kwargs.keys():
-                        epsilon = np.random.normal(0, 1)
-                        s = s * np.exp((r - np.power(sigma, 2) / 2) * t + sigma * epsilon * np.sqrt(t))
-                        prc.append(s)
-                    else:
-                        if not isinstance(sigma, list):
-                            raise ValueError
+            sigma_raw = self.kwargs["sigma"]
+            sigma_array = np.fromiter(sigma_raw if isinstance(sigma_raw, Iterable) else [sigma_raw, ],
+                                      dtype="float64")
 
-                        rho = self.kwargs["rho"]
+            if self.n_dim > 1:
+                rho = self.kwargs["rho"]
+                upper_r = np.linalg.cholesky(rho)
 
-                        epsilon_1 = np.random.normal(0, 1)
-                        epsilon_2 = rho * epsilon_1 + np.sqrt(1 - np.power(rho, 2)) * np.random.normal(0, 1)
+                if not isinstance(rho, np.matrix):
+                    raise ValueError("Illegal input type of rho")
 
-                        s_1 = s_1 * np.exp((r - np.power(sigma[0], 2) / 2) * t + sigma[0] * epsilon_1 * np.sqrt(t))
-                        s_2 = s_2 * np.exp((r - np.power(sigma[1], 2) / 2) * t + sigma[1] * epsilon_2 * np.sqrt(t))
-
-                        prc_2d.append([s_1, s_2])
-
+                if rho.shape[0] != rho.shape[1] or rho.shape[0] != self.n_dim:
+                    raise ValueError("Illegal input dimension of rho")
             else:
-                raise ValueError
+                upper_r = 1
 
-            # prc = pd.Series(data=prc, index=date)
-            prc_2d = pd.DataFrame(data=prc_2d, index=date, columns=["s_1", "s_2"])
+            time_1 = time.time() - t_s
+            t_s = time.time()
+
+            for t in t_diff:
+                x = np.random.normal(0, 1, [self.n_dim, 1])
+                epsilon_array = np.fromiter(upper_r * x, dtype="float64")
+
+                s_array = s_array * np.exp((r - np.power(sigma_array, 2) / 2) * t
+                                           + sigma_array * epsilon_array * np.sqrt(t))
+                prc.append(s_array)
+
+            prc = np.array(prc)
+
+            time_2 = time.time() - t_s
         else:
-            if self._method == "GeoBrownian":
-                r = self._kwargs["r"]
-                sigma = self._kwargs["sigma"]
-                epsilon = np.random.normal(0, 1)
+            raise ValueError
 
-                prc = s * np.exp((r - np.power(sigma, 2) / 2) * upper_t + sigma * epsilon * np.sqrt(upper_t))
-            else:
-                raise ValueError
-
-        return prc_2d
+        return prc, time_1, time_2
 
 
 if __name__ == "__main__":
-    sim_engine = SimEngine(method="GeoBrownian", sigma=[0.2, 0.2], r=0.03, rho=-1)
-    upper_t_ = range(0, 252, 1)
+    # rho_ = np.matrix([[1, -0.999], [-0.999, 1]])
+    # sigma_ = [0.2, 0.3]
+
+    sigma_ = 0.4
+
+    sim_engine = SimEngine(method="GeoBrownian", sigma=sigma_, r=0.03)
+    upper_t_ = range(1, 252, 1)
     upper_t_ = np.array(upper_t_) / 252
 
     prc_seq = sim_engine.prc_generator(upper_t=upper_t_)
 
     import matplotlib.pyplot as plt
 
-    plt.plot(prc_seq["s_1"])
-    plt.plot(prc_seq["s_2"])
+    prc_seq.plot()
     plt.show()
 
 

@@ -1,5 +1,6 @@
 import abc
 import numpy as np
+import time
 
 from base.engine import SimEngine
 
@@ -26,9 +27,25 @@ class SimBase(object):
         self._r = r
         self._prc = None
 
+        self._total_gen_time_1 = None
+        self._total_gen_time_2 = None
+        self._total_calc_time = None
+
     @property
     def prc(self):
         return self._prc
+
+    @property
+    def total_gen_time_1(self):
+        return self._total_gen_time_1
+
+    @property
+    def total_gen_time_2(self):
+        return self._total_gen_time_2
+
+    @property
+    def total_calc_time(self):
+        return self._total_calc_time
 
     @abc.abstractmethod
     def _calc_payoff(self, underlying_prc, sim_t, **kwargs):
@@ -49,10 +66,20 @@ class SimBase(object):
         :return: expectation of price
         """
         prc_list = []
-        for _ in range(self._sim_times):
-            underlying_prc = self._sim_engine.prc_generator(sim_t)
+        self._total_gen_time_1 = 0
+        self._total_gen_time_2 = 0
+        self._total_calc_time = 0
 
+        for _ in range(self._sim_times):
+            underlying_prc, time_1, time_2 = self._sim_engine.prc_generator(sim_t)
+            self._total_gen_time_1 += time_1
+            self._total_gen_time_2 += time_2
+
+            tic_2 = time.time()
             prc = self._calc_payoff(underlying_prc, sim_t, **kwargs)
+            toc_2 = time.time()
+            self._total_calc_time += toc_2 - tic_2
+
             prc_list.append(prc)
 
         self._prc = np.mean(prc_list)
