@@ -22,7 +22,7 @@ class AsianOption(SimBase):
 
     def _calc_payoff(self, underlying_prc, sim_t, **kwargs):
         strike = kwargs["strike"]
-        final_prc = np.mean(underlying_prc[1:])
+        final_prc = np.mean(underlying_prc)
 
         prc = max(final_prc - strike, 0) * np.exp(-self._r * sim_t[-1])
         return prc
@@ -30,7 +30,7 @@ class AsianOption(SimBase):
 
 if __name__ == "__main__":
     r_ = 0.03
-    sim_times_ = 50000
+    sim_times_ = 100000
     sim_t_1 = 20 / 365
     sim_t_2 = np.array([5, 10, 15, 20]) / 365
 
@@ -40,8 +40,7 @@ if __name__ == "__main__":
     eu_p = eu_opt.sim_exe(sim_t_1, strike=100)
     print(eu_p)
     print("=================")
-    print(eu_opt.total_gen_time_1)
-    print(eu_opt.total_gen_time_2)
+    print(eu_opt.total_gen_time)
     print(eu_opt.total_calc_time)
 
     print("+++++++++++++++++++++++")
@@ -50,8 +49,7 @@ if __name__ == "__main__":
     as_p = as_opt.sim_exe(sim_t_2, strike=100)
     print(as_p)
     print("=================")
-    print(as_opt.total_gen_time_1)
-    print(as_opt.total_gen_time_2)
+    print(as_opt.total_gen_time)
     print(as_opt.total_calc_time)
 
 

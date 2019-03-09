@@ -27,8 +27,7 @@ class SimBase(object):
         self._r = r
         self._prc = None
 
-        self._total_gen_time_1 = None
-        self._total_gen_time_2 = None
+        self._total_gen_time = None
         self._total_calc_time = None
 
     @property
@@ -36,12 +35,8 @@ class SimBase(object):
         return self._prc
 
     @property
-    def total_gen_time_1(self):
-        return self._total_gen_time_1
-
-    @property
-    def total_gen_time_2(self):
-        return self._total_gen_time_2
+    def total_gen_time(self):
+        return self._total_gen_time
 
     @property
     def total_calc_time(self):
@@ -66,19 +61,17 @@ class SimBase(object):
         :return: expectation of price
         """
         prc_list = []
-        self._total_gen_time_1 = 0
-        self._total_gen_time_2 = 0
+        self._total_gen_time = 0
         self._total_calc_time = 0
 
         for _ in range(self._sim_times):
-            underlying_prc, time_1, time_2 = self._sim_engine.prc_generator(sim_t)
-            self._total_gen_time_1 += time_1
-            self._total_gen_time_2 += time_2
+            tic = time.time()
+            underlying_prc = self._sim_engine.prc_generator(sim_t)
+            self._total_gen_time += time.time() - tic
 
-            tic_2 = time.time()
+            tic = time.time()
             prc = self._calc_payoff(underlying_prc, sim_t, **kwargs)
-            toc_2 = time.time()
-            self._total_calc_time += toc_2 - tic_2
+            self._total_calc_time += time.time() - tic
 
             prc_list.append(prc)
 

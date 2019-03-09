@@ -11,7 +11,7 @@ class SimEngine(object):
         Currently support methods:
             GeoBrownian: Geometric Brownian Motion
         kwargs for:
-            GeoBrownian: {"sigma": standard deviation, float or list
+            GeoBrownian: {"sigma": standard deviation, float or iterable
                           "r": risk-free expected payoff, float
                           "rho": correlation matrix, numpy.matrix
                           }
@@ -55,25 +55,23 @@ class SimEngine(object):
     def prc_generator(self, upper_t):
         """
         Generate price based on upper_t. Must keep in mind that upper_t is expressed in Year.
-        :param upper_t:     Type: float or iterable object of float   expressed in Year
-        :return:            Type: DataFrame   columns: upper_t, seq_N (N start from 0)
+        :param upper_t:     Type: float or iterable   expressed in Year
+        :return:            Type: numpy.array   matched with upper_t
         """
         if not isinstance(upper_t, Iterable):
             upper_t = [upper_t, ]
 
         if self._method == "GeoBrownian":
-            t_s = time.time()
-
             s_array = np.fromiter([self.s_0, ] * self.n_dim, dtype="float64")
-
-            prc = []
-            t_diff = np.diff(upper_t, prepend=0)
-
-            r = self.kwargs["r"]
 
             sigma_raw = self.kwargs["sigma"]
             sigma_array = np.fromiter(sigma_raw if isinstance(sigma_raw, Iterable) else [sigma_raw, ],
                                       dtype="float64")
+
+            r = self.kwargs["r"]
+
+            t_diff = np.diff(upper_t, prepend=0)
+            prc = []
 
             if self.n_dim > 1:
                 rho = self.kwargs["rho"]
@@ -87,9 +85,6 @@ class SimEngine(object):
             else:
                 upper_r = 1
 
-            time_1 = time.time() - t_s
-            t_s = time.time()
-
             for t in t_diff:
                 x = np.random.normal(0, 1, [self.n_dim, 1])
                 epsilon_array = np.fromiter(upper_r * x, dtype="float64")
@@ -100,28 +95,28 @@ class SimEngine(object):
 
             prc = np.array(prc)
 
-            time_2 = time.time() - t_s
         else:
             raise ValueError
 
-        return prc, time_1, time_2
+        return prc
 
 
 if __name__ == "__main__":
-    # rho_ = np.matrix([[1, -0.999], [-0.999, 1]])
-    # sigma_ = [0.2, 0.3]
+    rho_ = np.matrix([[1, 0], [0, 1]])
+    sigma_ = [0.2, 0.2]
 
-    sigma_ = 0.4
+    # sigma_ = 0.4
 
-    sim_engine = SimEngine(method="GeoBrownian", sigma=sigma_, r=0.03)
+    sim_engine = SimEngine(method="GeoBrownian", sigma=sigma_, r=0.03, rho=rho_)
     upper_t_ = range(1, 252, 1)
     upper_t_ = np.array(upper_t_) / 252
 
     prc_seq = sim_engine.prc_generator(upper_t=upper_t_)
 
+    print(np.corrcoef(prc_seq[:, 0], prc_seq[:, 1]))
     import matplotlib.pyplot as plt
 
-    prc_seq.plot()
+    plt.plot(prc_seq)
     plt.show()
 
 
