@@ -1,4 +1,6 @@
+import time
 import numpy as np
+# import numda
 
 from collections.abc import Iterable
 
@@ -83,9 +85,9 @@ class SimEngine(object):
             else:
                 upper_r = 1
 
-            for t in t_diff:
-                x = np.random.normal(0, 1, [self.n_dim, 1])
-                epsilon_array = np.fromiter(upper_r * x, dtype="float64")
+            x = np.random.normal(0, 1, [self.n_dim, t_diff.shape[0]])
+            for t, i in zip(t_diff, range(t_diff.shape[0])):
+                epsilon_array = np.fromiter(upper_r * x[:, [i]], dtype="float64")
 
                 s_array = s_array * np.exp((r - np.power(sigma_array, 2) / 2) * t
                                            + sigma_array * epsilon_array * np.sqrt(t))
@@ -105,17 +107,22 @@ if __name__ == "__main__":
 
     # sigma_ = 0.4
 
-    sim_engine = SimEngine(method="GeoBrownian", sigma=sigma_, r=0.03, rho=rho_)
-    upper_t_ = range(1, 252, 1)
-    upper_t_ = np.array(upper_t_) / 252
+    tic = time.time()
+    for _ in range(500):
+        sim_engine = SimEngine(method="GeoBrownian", sigma=sigma_, r=0.03, rho=rho_)
+        upper_t_ = range(1, 252, 1)
+        upper_t_ = np.array(upper_t_) / 252
 
-    prc_seq = sim_engine.prc_generator(upper_t=upper_t_)
+        prc_seq = sim_engine.prc_generator(upper_t=upper_t_)
+    toc = time.time() - tic
+    print(toc)
 
-    print(np.corrcoef(prc_seq[:, 0], prc_seq[:, 1]))
-    import matplotlib.pyplot as plt
 
-    plt.plot(prc_seq)
-    plt.show()
+    # print(np.corrcoef(prc_seq[:, 0], prc_seq[:, 1]))
+    # import matplotlib.pyplot as plt
+    #
+    # plt.plot(prc_seq)
+    # plt.show()
 
 
 

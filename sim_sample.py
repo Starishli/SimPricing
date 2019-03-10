@@ -28,7 +28,7 @@ class AsianOption(SimBase):
 
 if __name__ == "__main__":
     r_ = 0.03
-    sim_times_ = 100000
+    sim_times_ = 10000
     sim_t_1 = 20 / 365
     sim_t_2 = np.array([5, 10, 15, 20]) / 365
 
