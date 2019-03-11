@@ -1,7 +1,5 @@
 import time
 import numpy as np
-# import numda
-
 from collections.abc import Iterable
 
 
@@ -20,7 +18,7 @@ class SimEngine(object):
         :param kwargs:    Type: Dict
         """
         full_methods = ["GeoBrownian", ]
-        full_kwarg_map = {"GeoBrownian": ["sigma", "r", "rho"], }
+        full_kwarg_map = {"GeoBrownian": ["sigma", "r", "rho", ], }
 
         if method not in full_methods:
             raise ValueError("Illegal input of method!")
