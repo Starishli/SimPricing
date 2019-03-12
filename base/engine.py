@@ -109,11 +109,11 @@ class SimEngine(object):
             else:
                 upper_r = 1
 
-            self._time_1 = time.time() - tic
-            tic = time.time()
-
             x = np.random.normal(0, 1, [self.n_dim, t_diff.shape[0]])
             epsilon = upper_r * x
+
+            self._time_1 = time.time() - tic
+            tic = time.time()
 
             prc = _fast_sim_loop_geo_brownian(self.s_0, self.n_dim, t_diff, sigma_array, r, epsilon)
             prc = np.array(prc)
@@ -135,10 +135,11 @@ if __name__ == "__main__":
     time_1_l = []
     time_2_l = []
 
-    for _ in range(100):
+    upper_t_ = range(1, 61, 1)
+    upper_t_ = np.array(upper_t_) / 252
+
+    for _ in range(1000):
         sim_engine = SimEngine(method="GeoBrownian", sigma=sigma_, r=0.03, rho=rho_)
-        upper_t_ = range(1, 500, 1)
-        upper_t_ = np.array(upper_t_) / 252
 
         prc_seq = sim_engine.prc_generator(upper_t=upper_t_)
         time_1_l.append(sim_engine.time_1)
