@@ -6,7 +6,7 @@ from collections.abc import Iterable
 
 
 @nb.jit(nopython=True)
-def _fast_sim_loop(s_0, n_dim, t_diff, sigma_array, r, epsilon):
+def _fast_sim_loop_geo_brownian(s_0, n_dim, t_diff, sigma_array, r, epsilon):
     prc = []
     s_array = np.array([s_0, ] * n_dim)
 
@@ -48,6 +48,9 @@ class SimEngine(object):
         self._s_0 = float(s_0)
         self._n_dim = None
 
+        self._time_1 = None
+        self._time_2 = None
+
     @property
     def kwargs(self):
         return self._kwargs
@@ -65,6 +68,14 @@ class SimEngine(object):
                 return 1
         else:
             raise ValueError
+
+    @property
+    def time_1(self):
+        return self._time_1
+
+    @property
+    def time_2(self):
+        return self._time_2
 
     def prc_generator(self, upper_t):
         """
@@ -98,32 +109,20 @@ class SimEngine(object):
             else:
                 upper_r = 1
 
-            time_1 = time.time() - tic
+            self._time_1 = time.time() - tic
             tic = time.time()
 
             x = np.random.normal(0, 1, [self.n_dim, t_diff.shape[0]])
             epsilon = upper_r * x
 
-            # prc = []
-            # s_array = np.array([self.s_0, ] * self.n_dim, dtype="float64")
-            #
-            # for t, i in zip(t_diff, range(t_diff.shape[0])):
-            #     epsilon_current = np.array(epsilon[:, i])
-            #     s_array = s_array * np.exp((r - np.power(sigma_array, 2) / 2) * t
-            #                                + sigma_array * epsilon_current * np.sqrt(t))
-            #     prc.append(s_array)
-            #
-            # prc = np.array(prc)
-
-            prc = _fast_sim_loop(self.s_0, self.n_dim, t_diff, sigma_array, r, epsilon)
+            prc = _fast_sim_loop_geo_brownian(self.s_0, self.n_dim, t_diff, sigma_array, r, epsilon)
             prc = np.array(prc)
 
-            time_2 = time.time() - tic
-
+            self._time_2 = time.time() - tic
         else:
             raise ValueError
 
-        return prc, time_1, time_2
+        return prc
 
 
 if __name__ == "__main__":
@@ -136,14 +135,14 @@ if __name__ == "__main__":
     time_1_l = []
     time_2_l = []
 
-    for _ in range(1000):
+    for _ in range(100):
         sim_engine = SimEngine(method="GeoBrownian", sigma=sigma_, r=0.03, rho=rho_)
         upper_t_ = range(1, 500, 1)
         upper_t_ = np.array(upper_t_) / 252
 
-        prc_seq, time_1_, time_2_ = sim_engine.prc_generator(upper_t=upper_t_)
-        time_1_l.append(time_1_)
-        time_2_l.append(time_2_)
+        prc_seq = sim_engine.prc_generator(upper_t=upper_t_)
+        time_1_l.append(sim_engine.time_1)
+        time_2_l.append(sim_engine.time_2)
 
     toc = time.time() - tic_
     print(toc)
