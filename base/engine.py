@@ -11,12 +11,12 @@ def _fast_sim_loop(s_0, n_dim, t_diff, sigma_array, r, epsilon):
     s_array = np.array([s_0, ] * n_dim)
 
     for t, i in zip(t_diff, range(t_diff.shape[0])):
-        epsilon_current = np.array(epsilon[:, i], dtype='float64')
+        epsilon_current = np.array(list(epsilon[:, i]))
         s_array = s_array * np.exp((r - np.power(sigma_array, 2) / 2) * t
                                    + sigma_array * epsilon_current * np.sqrt(t))
         prc.append(s_array)
 
-    return np.array(prc)
+    return prc
 
 
 class SimEngine(object):
@@ -45,7 +45,7 @@ class SimEngine(object):
 
         self._method = method
         self._kwargs = kwargs
-        self._s_0 = s_0
+        self._s_0 = float(s_0)
         self._n_dim = None
 
     @property
@@ -72,6 +72,8 @@ class SimEngine(object):
         :param upper_t:     Type: float or iterable   expressed in Year
         :return:            Type: numpy.array   matched with upper_t
         """
+        tic = time.time()
+
         if not isinstance(upper_t, Iterable):
             upper_t = [upper_t, ]
 
@@ -96,28 +98,32 @@ class SimEngine(object):
             else:
                 upper_r = 1
 
-            prc = []
-            s_array = np.array([self.s_0, ] * self.n_dim, dtype="float64")
+            time_1 = time.time() - tic
+            tic = time.time()
+
             x = np.random.normal(0, 1, [self.n_dim, t_diff.shape[0]])
             epsilon = upper_r * x
 
-            for t, i in zip(t_diff, range(t_diff.shape[0])):
-                epsilon_current = np.array(epsilon[:, i])
-                s_array = s_array * np.exp((r - np.power(sigma_array, 2) / 2) * t
-                                           + sigma_array * epsilon_current * np.sqrt(t))
-                prc.append(s_array)
+            # prc = []
+            # s_array = np.array([self.s_0, ] * self.n_dim, dtype="float64")
+            #
+            # for t, i in zip(t_diff, range(t_diff.shape[0])):
+            #     epsilon_current = np.array(epsilon[:, i])
+            #     s_array = s_array * np.exp((r - np.power(sigma_array, 2) / 2) * t
+            #                                + sigma_array * epsilon_current * np.sqrt(t))
+            #     prc.append(s_array)
+            #
+            # prc = np.array(prc)
 
+            prc = _fast_sim_loop(self.s_0, self.n_dim, t_diff, sigma_array, r, epsilon)
             prc = np.array(prc)
 
-            # x = np.random.normal(0, 1, [self.n_dim, t_diff.shape[0]])
-            # epsilon = upper_r
-            #
-            # prc = _fast_sim_loop(self.s_0, self.n_dim, t_diff, upper_r, sigma_array, r, x)
+            time_2 = time.time() - tic
 
         else:
             raise ValueError
 
-        return prc
+        return prc, time_1, time_2
 
 
 if __name__ == "__main__":
@@ -126,15 +132,24 @@ if __name__ == "__main__":
 
     # sigma_ = 0.4
 
-    tic = time.time()
-    for _ in range(100):
+    tic_ = time.time()
+    time_1_l = []
+    time_2_l = []
+
+    for _ in range(1000):
         sim_engine = SimEngine(method="GeoBrownian", sigma=sigma_, r=0.03, rho=rho_)
         upper_t_ = range(1, 500, 1)
         upper_t_ = np.array(upper_t_) / 252
 
-        prc_seq = sim_engine.prc_generator(upper_t=upper_t_)
-    toc = time.time() - tic
+        prc_seq, time_1_, time_2_ = sim_engine.prc_generator(upper_t=upper_t_)
+        time_1_l.append(time_1_)
+        time_2_l.append(time_2_)
+
+    toc = time.time() - tic_
     print(toc)
+
+    print(sum(time_1_l))
+    print(sum(time_2_l))
 
 
     # print(np.corrcoef(prc_seq[:, 0], prc_seq[:, 1]))
