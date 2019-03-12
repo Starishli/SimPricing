@@ -1,6 +1,22 @@
 import time
 import numpy as np
+import numba as nb
+
 from collections.abc import Iterable
+
+
+@nb.jit(nopython=True)
+def _fast_sim_loop(s_0, n_dim, t_diff, sigma_array, r, epsilon):
+    prc = []
+    s_array = np.array([s_0, ] * n_dim)
+
+    for t, i in zip(t_diff, range(t_diff.shape[0])):
+        epsilon_current = np.array(epsilon[:, i], dtype='float64')
+        s_array = s_array * np.exp((r - np.power(sigma_array, 2) / 2) * t
+                                   + sigma_array * epsilon_current * np.sqrt(t))
+        prc.append(s_array)
+
+    return np.array(prc)
 
 
 class SimEngine(object):
@@ -60,16 +76,13 @@ class SimEngine(object):
             upper_t = [upper_t, ]
 
         if self._method == "GeoBrownian":
-            s_array = np.fromiter([self.s_0, ] * self.n_dim, dtype="float64")
 
             sigma_raw = self.kwargs["sigma"]
-            sigma_array = np.fromiter(sigma_raw if isinstance(sigma_raw, Iterable) else [sigma_raw, ],
-                                      dtype="float64")
+            sigma_array = np.array(sigma_raw if isinstance(sigma_raw, Iterable) else [sigma_raw, ])
 
             r = self.kwargs["r"]
 
             t_diff = np.diff(upper_t, prepend=0)
-            prc = []
 
             if self.n_dim > 1:
                 rho = self.kwargs["rho"]
@@ -83,15 +96,23 @@ class SimEngine(object):
             else:
                 upper_r = 1
 
+            prc = []
+            s_array = np.array([self.s_0, ] * self.n_dim, dtype="float64")
             x = np.random.normal(0, 1, [self.n_dim, t_diff.shape[0]])
-            for t, i in zip(t_diff, range(t_diff.shape[0])):
-                epsilon_array = np.fromiter(upper_r * x[:, [i]], dtype="float64")
+            epsilon = upper_r * x
 
+            for t, i in zip(t_diff, range(t_diff.shape[0])):
+                epsilon_current = np.array(epsilon[:, i])
                 s_array = s_array * np.exp((r - np.power(sigma_array, 2) / 2) * t
-                                           + sigma_array * epsilon_array * np.sqrt(t))
+                                           + sigma_array * epsilon_current * np.sqrt(t))
                 prc.append(s_array)
 
             prc = np.array(prc)
+
+            # x = np.random.normal(0, 1, [self.n_dim, t_diff.shape[0]])
+            # epsilon = upper_r
+            #
+            # prc = _fast_sim_loop(self.s_0, self.n_dim, t_diff, upper_r, sigma_array, r, x)
 
         else:
             raise ValueError
@@ -100,15 +121,15 @@ class SimEngine(object):
 
 
 if __name__ == "__main__":
-    rho_ = np.matrix([[1, 0], [0, 1]])
+    rho_ = np.matrix([[1, 0.5], [0.5, 1]])
     sigma_ = [0.2, 0.2]
 
     # sigma_ = 0.4
 
     tic = time.time()
-    for _ in range(500):
+    for _ in range(100):
         sim_engine = SimEngine(method="GeoBrownian", sigma=sigma_, r=0.03, rho=rho_)
-        upper_t_ = range(1, 252, 1)
+        upper_t_ = range(1, 500, 1)
         upper_t_ = np.array(upper_t_) / 252
 
         prc_seq = sim_engine.prc_generator(upper_t=upper_t_)
