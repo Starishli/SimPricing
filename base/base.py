@@ -1,6 +1,8 @@
 import abc
 import numpy as np
 import time
+from multiprocessing import Pool
+from itertools import repeat
 
 from base.engine import SimEngine
 
@@ -26,6 +28,7 @@ class SimBase(object):
 
         self._r = r
         self._prc = None
+        self._prc_list = []
 
         self._total_gen_time = None
         self._total_calc_time = None
@@ -53,6 +56,17 @@ class SimBase(object):
         """
         return
 
+    def _single_sim_exe(self, sim_t, **kwargs):
+        tic = time.time()
+        underlying_prc = self._sim_engine.prc_generator(sim_t)
+        self._total_gen_time += time.time() - tic
+
+        tic = time.time()
+        prc = self._calc_payoff(underlying_prc, sim_t, **kwargs)
+        self._total_calc_time += time.time() - tic
+
+        self._prc_list.append(prc)
+
     def sim_exe(self, sim_t, **kwargs):
         """
         Execute simulation
@@ -60,20 +74,16 @@ class SimBase(object):
         :param kwargs:
         :return: expectation of price
         """
-        prc_list = []
         self._total_gen_time = 0
         self._total_calc_time = 0
 
         for _ in range(self._sim_times):
-            tic = time.time()
-            underlying_prc = self._sim_engine.prc_generator(sim_t)
-            self._total_gen_time += time.time() - tic
+            self._single_sim_exe(sim_t, **kwargs)
 
-            tic = time.time()
-            prc = self._calc_payoff(underlying_prc, sim_t, **kwargs)
-            self._total_calc_time += time.time() - tic
+        # full_sim = repeat(sim_t, self._sim_times)
+        #
+        # with Pool(2) as p:
+        #     p.starmap(self._single_sim_exe, zip(full_sim, ))
 
-            prc_list.append(prc)
-
-        self._prc = np.mean(prc_list)
+        self._prc = np.mean(self._prc_list)
         return self._prc
