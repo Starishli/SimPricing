@@ -135,10 +135,10 @@ if __name__ == "__main__":
     time_1_l = []
     time_2_l = []
 
-    upper_t_ = range(1, 61, 1)
+    upper_t_ = range(1, 81, 1)
     upper_t_ = np.array(upper_t_) / 252
 
-    for _ in range(1000):
+    for _ in range(50000):
         sim_engine = SimEngine(method="GeoBrownian", sigma=sigma_, r=0.03, rho=rho_)
 
         prc_seq = sim_engine.prc_generator(upper_t=upper_t_)
